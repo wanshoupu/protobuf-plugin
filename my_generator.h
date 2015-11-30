@@ -10,7 +10,6 @@
 using namespace std;
 using namespace google::protobuf;
 namespace my {
-
     // google::protobuf::compiler::CodeGenerator implementation for generated Python protocol buffer classes.
     // If you create your own protocol compiler binary and you want it to support
     // Python output, you can do so by registering an instance of this
@@ -26,7 +25,9 @@ namespace my {
                             google::protobuf::compiler::GeneratorContext* generator_context,
                             string* error) const;
 
+
      private:
+      string GetTypeName(const google::protobuf::FieldDescriptor::Type& type) const;
       void PrintImports() const;
       void PrintFileDescriptor() const;
       void PrintTopLevelEnums() const;
@@ -111,6 +112,7 @@ namespace my {
       mutable const FileDescriptor* file_;  // Set in Generate().  Under mutex_.
       mutable string file_descriptor_serialized_;
       mutable io::Printer* printer_;  // Set in Generate().  Under mutex_.
+      map<google::protobuf::FieldDescriptor::Type, string> dataTypeNameMap;
 
       GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MyGenerator);
     };
