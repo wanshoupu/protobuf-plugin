@@ -89,17 +89,15 @@ namespace my {
       string module_name = ModuleName(file->name());
       string filename = module_name;
       StripString(&filename, ".", '/');
-//      filename += ".my";
 
       FileDescriptorProto fdp;
       file_->CopyTo(&fdp);
       fdp.SerializeToString(&file_descriptor_serialized_);
 
-//      PrintFileDependencies(file_);
       for (int i = 0; i < file_->message_type_count(); ++i) {
           const Descriptor& message_descriptor = *file_->message_type(i);
 
-          const string outputFileName = filename + "." + message_descriptor.name() + ".my";
+          const string outputFileName = message_descriptor.name() + ".my";
           scoped_ptr<io::ZeroCopyOutputStream> output(context->Open(outputFileName));
           GOOGLE_CHECK(output.get());
           io::Printer printer(output.get(), '$');
