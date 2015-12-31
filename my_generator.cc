@@ -120,10 +120,7 @@ namespace my {
 
     //Used by Generate
     void MyGenerator::PrintDescriptor(const Descriptor& message_descriptor) const {
-        printer_->Print("\n");
-//        printer_->Print("$descriptor_name$ = {\n",
-//                        "descriptor_name",
-//						message_descriptor.name());
+//        printer_->Print("\n");
         printer_->Print("{\n");
         printer_->Indent();
         map<string, string> m;
@@ -181,7 +178,7 @@ namespace my {
         printer_->Print(",\n");
       }
       printer_->Outdent();
-      printer_->Print("\n");
+//      printer_->Print("\n");
     }
 
 }  // namespace my
