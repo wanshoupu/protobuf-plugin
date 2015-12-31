@@ -25,12 +25,12 @@ namespace my {
       return StripSuffixString(filename, suffix);
     }
 
-    // Returns the Python module name expected for a given .proto filename.
+    // Returns the module name expected for a given .proto filename.
     string ModuleName(const string& filename) {
       string basename = StripProto(filename);
       StripString(&basename, "-", '_');
       StripString(&basename, "/", '.');
-      return basename + "_pb2";
+      return basename;
     }
 
     string FieldNameConverter(const string& name){
@@ -54,7 +54,7 @@ namespace my {
       return name;
     }
 
-    // Name of the class attribute where we store the Python
+    // Name of the class attribute where we store the
     // descriptor.Descriptor instance for the generated class.
     // Must stay consistent with the _DESCRIPTOR_KEY constant
     // in proto2/public/reflection.py.
@@ -71,7 +71,7 @@ namespace my {
              file->options().py_generic_services();
     }
 
-    // Returns a Python literal giving the default value for a field.
+    // Returns a literal giving the default value for a field.
     // If the field specifies no explicit default value, we'll return
     // the default default value for the field type (zero for numbers,
     // empty string for strings, empty list for repeated fields, and
@@ -97,7 +97,7 @@ namespace my {
         case FieldDescriptor::CPPTYPE_DOUBLE: {
           double value = field.default_value_double();
           if (value == numeric_limits<double>::infinity()) {
-            // Python pre-2.6 on Windows does not parse "inf" correctly.  However,
+            // pre-2.6 on Windows does not parse "inf" correctly.  However,
             // a numeric literal that is too big for a double will become infinity.
             return "1e10000";
           } else if (value == -numeric_limits<double>::infinity()) {
@@ -113,7 +113,7 @@ namespace my {
         case FieldDescriptor::CPPTYPE_FLOAT: {
           float value = field.default_value_float();
           if (value == numeric_limits<float>::infinity()) {
-            // Python pre-2.6 on Windows does not parse "inf" correctly.  However,
+            // pre-2.6 on Windows does not parse "inf" correctly.  However,
             // a numeric literal that is too big for a double will become infinity.
             return "1e10000";
           } else if (value == -numeric_limits<float>::infinity()) {
@@ -195,22 +195,24 @@ namespace my {
       string module_name = ModuleName(file->name());
       string filename = module_name;
       StripString(&filename, ".", '/');
-      filename += ".my";
+//      filename += ".my";
 
       FileDescriptorProto fdp;
       file_->CopyTo(&fdp);
       fdp.SerializeToString(&file_descriptor_serialized_);
 
-      scoped_ptr<io::ZeroCopyOutputStream> output(context->Open(filename));
-      GOOGLE_CHECK(output.get());
-      io::Printer printer(output.get(), '$');
-      printer_ = &printer;
+//      PrintFileDependencies(file_);
+      for (int i = 0; i < file_->message_type_count(); ++i) {
+          const Descriptor& message_descriptor = *file_->message_type(i);
 
-      PrintFileDependencies(file_);
-//      for (int i = 0; i < file_->message_type_count(); ++i) {
-//        PrintDescriptor(*file_->message_type(i));
-//        printer_->Print("\n");
-//      }
+          const string outputFileName = filename + "." + message_descriptor.name() + ".my";
+          scoped_ptr<io::ZeroCopyOutputStream> output(context->Open(outputFileName));
+          GOOGLE_CHECK(output.get());
+          io::Printer printer(output.get(), '$');
+          printer_ = &printer;
+        PrintDescriptor(message_descriptor);
+        printer_->Print("\n");
+      }
 
 //       FixForeignFieldsInDescriptors();
 //       PrintMessages();
@@ -227,7 +229,7 @@ namespace my {
 //         PrintServices();
 //       }
 
-      return !printer.failed();
+      return !printer_->failed();
     }
 
     string MyGenerator::GetTypeName(const google::protobuf::FieldDescriptor::Type& type) const {
@@ -266,8 +268,8 @@ namespace my {
       printer_->Print("\n");
     }
 
-    // Prints a Python statement assigning the appropriate module-level
-    // enum name to a Python EnumDescriptor object equivalent to
+    // Prints a statement assigning the appropriate module-level
+    // enum name to a EnumDescriptor object equivalent to
     // enum_descriptor.
     void MyGenerator::PrintEnum(const EnumDescriptor& enum_descriptor) const {
       map<string, string> m;
@@ -424,13 +426,13 @@ namespace my {
       printer_->Outdent();
     }
 
-    // Mutually recursive with PrintNestedDescriptors().
     void MyGenerator::PrintDescriptor(const Descriptor& message_descriptor) const {
-      PrintNestedDescriptors(message_descriptor);
+        PrintNestedDescriptors(message_descriptor);
         printer_->Print("\n");
-        printer_->Print("$descriptor_name$ = {\n",
-                        "descriptor_name",
-						message_descriptor.name());
+//        printer_->Print("$descriptor_name$ = {\n",
+//                        "descriptor_name",
+//						message_descriptor.name());
+        printer_->Print("{\n");
         printer_->Indent();
         map<string, string> m;
         PrintFieldDescriptorsInDescriptor(
@@ -441,11 +443,11 @@ namespace my {
             &Descriptor::extension_count, &Descriptor::extension);
 
         printer_->Outdent();
-        printer_->Print("}\n");
+        printer_->Print("}");
 
     }
 
-    // Prints Python Descriptor objects for all nested types contained in
+    // Prints Descriptor objects for all nested types contained in
     // message_descriptor.
     //
     // Mutually recursive with PrintDescriptor().
@@ -469,10 +471,10 @@ namespace my {
       }
     }
 
-    // Prints a Python class for the given message descriptor.  We defer to the
+    // Prints a class for the given message descriptor.  We defer to the
     // metaclass to do almost all of the work of actually creating a useful class.
     // The purpose of this function and its many helper functions above is merely
-    // to output a Python version of the descriptors, which the metaclass in
+    // to output a version of the descriptors, which the metaclass in
     // reflection.py will use to construct the meat of the class itself.
     //
     // Mutually recursive with PrintNestedMessages().
@@ -591,19 +593,19 @@ namespace my {
     }
 
     // Sets any necessary message_type and enum_type attributes
-    // for the Python version of |field|.
+    // for the version of |field|.
     //
     // containing_type may be NULL, in which case this is a module-level field.
     //
-    // python_dict_name is the name of the Python dict where we should
+    // dict_name is the name of the dict where we should
     // look the field up in the containing type.  (e.g., fields_by_name
-    // or extensions_by_name).  We ignore python_dict_name if containing_type
+    // or extensions_by_name).  We ignore dict_name if containing_type
     // is NULL.
     void MyGenerator::FixForeignFieldsInField(const Descriptor* containing_type,
                                             const FieldDescriptor& field,
-                                            const string& python_dict_name) const {
+                                            const string& dict_name) const {
       const string field_referencing_expression = FieldReferencingExpression(
-          containing_type, field, python_dict_name);
+          containing_type, field, dict_name);
       map<string, string> m;
       m["field_ref"] = field_referencing_expression;
       const Descriptor* foreign_message_type = field.message_type();
@@ -623,14 +625,14 @@ namespace my {
     //
     // containing_type may be NULL, in which case this is a module-level field.
     //
-    // python_dict_name is the name of the Python dict where we should
+    // dict_name is the name of the dict where we should
     // look the field up in the containing type.  (e.g., fields_by_name
-    // or extensions_by_name).  We ignore python_dict_name if containing_type
+    // or extensions_by_name).  We ignore dict_name if containing_type
     // is NULL.
     string MyGenerator::FieldReferencingExpression(
         const Descriptor* containing_type,
         const FieldDescriptor& field,
-        const string& python_dict_name) const {
+        const string& dict_name) const {
       // We should only ever be looking up fields in the current file.
       // The only things we refer to from other files are message descriptors.
       GOOGLE_CHECK_EQ(field.file(), file_) << field.file()->name() << " vs. "
@@ -641,7 +643,7 @@ namespace my {
       return strings::Substitute(
           "$0.$1['$2']",
           ModuleLevelDescriptorName(*containing_type),
-          python_dict_name, field.name());
+          dict_name, field.name());
     }
 
     // Prints containing_type for nested descriptors or enum descriptors.
@@ -661,7 +663,7 @@ namespace my {
     }
 
     // Prints statements setting the message_type and enum_type fields in the
-    // Python descriptor objects we've already output in ths file.  We must
+    // descriptor objects we've already output in ths file.  We must
     // do this in a separate step due to circular references (otherwise, we'd
     // just set everything in the initial assignment statements).
     void MyGenerator::FixForeignFieldsInDescriptors() const {
@@ -728,7 +730,7 @@ namespace my {
       }
     }
 
-    // Returns a Python expression that instantiates a Python EnumValueDescriptor
+    // Returns a expression that instantiates a EnumValueDescriptor
     // object for the given C++ descriptor.
     void MyGenerator::PrintEnumValueDescriptor(
         const EnumValueDescriptor& descriptor) const {
@@ -748,7 +750,7 @@ namespace my {
           "  type=None)");
     }
 
-    // Returns a Python expression that calls descriptor._ParseOptions using
+    // Returns a expression that calls descriptor._ParseOptions using
     // the given descriptor class name and serialized options protobuf string.
     string MyGenerator::OptionsValue(
         const string& class_name, const string& serialized_options) const {
@@ -765,11 +767,14 @@ namespace my {
 
     void MyGenerator::PrintFieldDescriptor(
         const FieldDescriptor& field, bool is_extension) const {
+    	if(field.is_repeated()){
+        	//array of primitive types or message
+    		printer_->Print("[\n");
+    		printer_->Indent();
+    	}
         if(field.type() == FieldDescriptor::Type::TYPE_MESSAGE){
         	//message
-            printer_->Print("{...}");
-        }else if(field.is_repeated()){
-        	//array of primitive types or message
+        	PrintDescriptor(*field.message_type());
         }else {
         	//single primitive types (optional or required)
             map<string, string> m;
@@ -784,6 +789,10 @@ namespace my {
               "$name$ : $type$ // extension field";
             printer_->Print(m, is_extension ? extension_descriptor_decl : field_descriptor_decl);
         }
+    	if(field.is_repeated()){
+    		printer_->Outdent();
+    		printer_->Print("\n]");
+    	}
     }
 
     // Helper for Print{Fields,Extensions}InDescriptor().
@@ -848,7 +857,7 @@ namespace my {
       return name;
     }
 
-    // Returns the unique Python module-level identifier given to a service
+    // Returns the unique module-level identifier given to a service
     // descriptor.
     string MyGenerator::ModuleLevelServiceDescriptorName(
         const ServiceDescriptor& descriptor) const {

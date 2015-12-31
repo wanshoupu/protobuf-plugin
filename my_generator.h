@@ -10,9 +10,9 @@
 using namespace std;
 using namespace google::protobuf;
 namespace my {
-    // google::protobuf::compiler::CodeGenerator implementation for generated Python protocol buffer classes.
+    // google::protobuf::compiler::CodeGenerator implementation for generated protocol buffer classes.
     // If you create your own protocol compiler binary and you want it to support
-    // Python output, you can do so by registering an instance of this
+    // output, you can do so by registering an instance of this
     // google::protobuf::compiler::CodeGenerator with the CommandLineInterface in your main() function.
     class LIBPROTOC_EXPORT MyGenerator : public google::protobuf::compiler::CodeGenerator {
      public:
@@ -64,13 +64,13 @@ namespace my {
           const Descriptor* containing_descriptor) const;
       void FixForeignFieldsInField(const Descriptor* containing_type,
                                    const FieldDescriptor& field,
-                                   const string& python_dict_name) const;
+                                   const string& dict_name) const;
       void AddMessageToFileDescriptor(const Descriptor& descriptor) const;
       void AddEnumToFileDescriptor(const EnumDescriptor& descriptor) const;
       void AddExtensionToFileDescriptor(const FieldDescriptor& descriptor) const;
       string FieldReferencingExpression(const Descriptor* containing_type,
                                         const FieldDescriptor& field,
-                                        const string& python_dict_name) const;
+                                        const string& dict_name) const;
       template <typename DescriptorT>
       void FixContainingTypeInDescriptor(
           const DescriptorT& descriptor,
@@ -114,6 +114,7 @@ namespace my {
       mutable const FileDescriptor* file_;  // Set in Generate().  Under mutex_.
       mutable string file_descriptor_serialized_;
       mutable io::Printer* printer_;  // Set in Generate().  Under mutex_.
+      map<string, Descriptor*> messageTypeMap_;
       map<google::protobuf::FieldDescriptor::Type, string> dataTypeNameMap;
 
       GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MyGenerator);
