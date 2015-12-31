@@ -168,6 +168,19 @@ namespace my {
     MyGenerator::~MyGenerator() {
     }
 
+    void MyGenerator::PrintFileDependencies(const FileDescriptor* file) const {
+    	  for (int i = 0; i < file->dependency_count(); ++i) {
+    		  const FileDescriptor* depFile = file->dependency(i);
+    	    string module_name = ModuleName(depFile->name());
+    	    printer_->Print("import $module$\n", "module",
+    	                    module_name);
+    	    printer_->Indent();
+    	    PrintFileDependencies(depFile);
+    	    printer_->Outdent();
+    	  }
+
+    }
+
     bool MyGenerator::Generate(const FileDescriptor* file,
                              const string& parameter,
                              google::protobuf::compiler::GeneratorContext* context,
@@ -193,13 +206,14 @@ namespace my {
       io::Printer printer(output.get(), '$');
       printer_ = &printer;
 
+      PrintFileDependencies(file_);
 //      for (int i = 0; i < file_->message_type_count(); ++i) {
 //        PrintDescriptor(*file_->message_type(i));
 //        printer_->Print("\n");
 //      }
 
 //       FixForeignFieldsInDescriptors();
-       PrintMessages();
+//       PrintMessages();
        // We have to fix up the extensions after the message classes themselves,
        // since they need to call static RegisterExtension() methods on these
        // classes.

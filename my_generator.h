@@ -106,6 +106,8 @@ namespace my {
       void FixOptionsForEnum(const EnumDescriptor& descriptor) const;
       void FixOptionsForMessage(const Descriptor& descriptor) const;
 
+      void PrintFileDependencies(const FileDescriptor* file) const;
+
       // Very coarse-grained lock to ensure that Generate() is reentrant.
       // Guards file_, printer_ and file_descriptor_serialized_.
       mutable Mutex mutex_;
