@@ -75,6 +75,34 @@ void MyGenerator::PrintFileDependencies(const FileDescriptor* file) const {
 
 }
 
+std::vector<const Descriptor* > getTopLevelMessages(const FileDescriptor* file){
+	std::set<const Descriptor*> msgSet;
+	for (int i = 0; i < file->message_type_count(); ++i) {
+		msgSet.insert(file->message_type(i));
+	}
+
+	std::set<const Descriptor*> dependedByOthers;
+	for (int i = 0; i < file->message_type_count(); ++i) {
+		const Descriptor* msg = file->message_type(i);
+		for(int j = 0; j < msg->field_count(); ++j){
+			const FieldDescriptor* field = msg->field(j);
+			if(field->type() == FieldDescriptor::Type::TYPE_MESSAGE){
+				const Descriptor* fieldDesc = field->message_type();
+				if(msgSet.count(fieldDesc) > 0) {
+					dependedByOthers.insert(fieldDesc);
+				}
+			}
+		}
+	}
+
+	std::vector<const Descriptor* > result;
+	for (int i = 0; i < file->message_type_count(); ++i) {
+		if(dependedByOthers.count(file->message_type(i)) == 0)
+			result.push_back(file->message_type(i));
+	}
+	return result;
+}
+
 bool MyGenerator::Generate(const FileDescriptor* file,
 		const string& parameter,
 		google::protobuf::compiler::GeneratorContext* context,
@@ -94,19 +122,19 @@ bool MyGenerator::Generate(const FileDescriptor* file,
 	file_->CopyTo(&fdp);
 	fdp.SerializeToString(&file_descriptor_serialized_);
 
-	for (int i = 0; i < file_->message_type_count(); ++i) {
-		const Descriptor& message_descriptor = *file_->message_type(i);
-
-		const string outputFileName = message_descriptor.name() + ".json";
+	std::vector<const Descriptor* > msgs = getTopLevelMessages(file_);
+	for (int i = 0; i < msgs.size(); ++i) {
+		const string outputFileName = msgs[i]->name() + ".json";
 		scoped_ptr<io::ZeroCopyOutputStream> output(context->Open(outputFileName));
 		GOOGLE_CHECK(output.get());
 		io::Printer printer(output.get(), '$');
 		printer_ = &printer;
-		PrintDescriptor(message_descriptor);
+		PrintDescriptor(*msgs[i]);
 		printer_->Print("\n");
+		if(printer.failed()) return false;
 	}
 
-	return !printer_->failed();
+	return true;
 }
 
 string MyGenerator::GetTypeName(const google::protobuf::FieldDescriptor::Type& type) const {
