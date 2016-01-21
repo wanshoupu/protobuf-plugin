@@ -97,7 +97,7 @@ namespace my {
       for (int i = 0; i < file_->message_type_count(); ++i) {
           const Descriptor& message_descriptor = *file_->message_type(i);
 
-          const string outputFileName = message_descriptor.name() + ".my";
+          const string outputFileName = message_descriptor.name() + ".json";
           scoped_ptr<io::ZeroCopyOutputStream> output(context->Open(outputFileName));
           GOOGLE_CHECK(output.get());
           io::Printer printer(output.get(), '$');
@@ -135,26 +135,20 @@ namespace my {
 
     void MyGenerator::PrintFieldDescriptor(
         const FieldDescriptor& field, bool is_extension) const {
+        printer_->Print("$name$ : ", "name", FieldNameConverter(field.name()));
     	if(field.is_repeated()){
         	//array of primitive types or message
     		printer_->Print("[\n");
     		printer_->Indent();
     	}
         if(field.type() == FieldDescriptor::Type::TYPE_MESSAGE){
+            if(is_extension){
+              printer_->Print(" // extension field");
+            }
         	//message
         	PrintDescriptor(*field.message_type());
         }else {
-        	//single primitive types (optional or required)
-            map<string, string> m;
-            m["name"] = FieldNameConverter(field.name());
-            m["type"] = GetTypeName(field.type());
-            // We always set message_type and enum_type to None at this point, and then
-            // these fields in correctly after all referenced descriptors have been
-            const char field_descriptor_decl[] =
-              "$name$ : $type$";
-            const char extension_descriptor_decl[] =
-              "$name$ : $type$ // extension field";
-            printer_->Print(m, is_extension ? extension_descriptor_decl : field_descriptor_decl);
+        	printer_->Print("$type$", "type", GetTypeName(field.type()));
         }
     	if(field.is_repeated()){
     		printer_->Outdent();
